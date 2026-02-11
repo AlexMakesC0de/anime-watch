@@ -18,6 +18,8 @@ const api = {
   getEpisodeProgress: (anilistId: number, episodeNumber: number) =>
     ipcRenderer.invoke('db:get-episode-progress', anilistId, episodeNumber),
   getContinueWatching: () => ipcRenderer.invoke('db:get-continue-watching'),
+  toggleEpisodeCompleted: (anilistId: number, episodeNumber: number, completed: boolean) =>
+    ipcRenderer.invoke('db:toggle-episode-completed', anilistId, episodeNumber, completed),
 
   // ── Streaming Provider ─────────────────────────
   fetchEpisodeSources: (opts: Record<string, unknown>) =>

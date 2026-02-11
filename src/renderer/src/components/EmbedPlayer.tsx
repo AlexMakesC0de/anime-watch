@@ -28,6 +28,7 @@ export default function EmbedPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const progressIntervalRef = useRef<number | null>(null)
   const lastReportedRef = useRef(0)
+  const endedFiredRef = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
 
   // Inject CSS and JS after the player page loads
@@ -127,7 +128,14 @@ export default function EmbedPlayer({
             lastReportedRef.current = state.currentTime
             onProgress?.(state.currentTime, state.duration)
           }
-          if (state.ended) {
+          // Detect episode end: video.ended, OR watched past 85% of duration
+          const isNearEnd = state.duration > 0 && state.currentTime / state.duration > 0.85
+          if ((state.ended || isNearEnd) && !endedFiredRef.current) {
+            endedFiredRef.current = true
+            // Report final progress so it's marked completed
+            if (state.duration > 0) {
+              onProgress?.(state.currentTime, state.duration)
+            }
             onEnded?.()
           }
         })

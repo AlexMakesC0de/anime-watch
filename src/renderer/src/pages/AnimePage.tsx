@@ -24,6 +24,8 @@ export default function AnimePage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
 
+  const anilistId = id ? parseInt(id) : 0
+
   useEffect(() => {
     if (id) loadAnime(parseInt(id))
   }, [id])
@@ -76,6 +78,15 @@ export default function AnimePage(): JSX.Element {
     if (!anime) return
     await window.api.removeAnime(anime.id)
     setLocalAnime(null)
+  }
+
+  async function handleToggleEpisodeWatched(ep: number): Promise<void> {
+    const current = getEpisodeStatus(ep)
+    const newCompleted = current !== 'completed'
+    await window.api.toggleEpisodeCompleted(anilistId, ep, newCompleted)
+    // Refresh progress
+    const progress = await window.api.getProgress(anilistId) as EpisodeProgress[]
+    setEpisodeProgress(progress)
   }
 
   const getEpisodeStatus = (ep: number): 'completed' | 'in-progress' | 'unwatched' => {
@@ -278,6 +289,11 @@ export default function AnimePage(): JSX.Element {
                   <button
                     key={ep}
                     onClick={() => navigate(`/watch/${anime.id}/${ep}`)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      handleToggleEpisodeWatched(ep)
+                    }}
+                    title="Right-click to toggle watched"
                     className={`relative flex items-center justify-center h-10 rounded-lg text-sm font-medium
                       transition-all hover:scale-105 ${
                         status === 'completed'

@@ -14,7 +14,8 @@ import {
   getProgress,
   getEpisodeProgress,
   getContinueWatching,
-  clearProviderMapping
+  clearProviderMapping,
+  toggleEpisodeCompleted
 } from './database'
 import { fetchEpisodeSources, type FetchEpisodeOpts } from './providers'
 import { startProxyServer, stopProxyServer } from './proxy'
@@ -108,6 +109,9 @@ function registerIpcHandlers(): void {
     getEpisodeProgress(anilistId, episodeNumber)
   )
   ipcMain.handle('db:get-continue-watching', () => getContinueWatching())
+  ipcMain.handle('db:toggle-episode-completed', (_event, anilistId: number, episodeNumber: number, completed: boolean) =>
+    toggleEpisodeCompleted(anilistId, episodeNumber, completed)
+  )
 
   // ── Streaming Provider ────────────────────────────────────────
   ipcMain.handle('provider:fetch-sources', async (_event, opts: FetchEpisodeOpts) => {

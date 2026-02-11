@@ -24,6 +24,7 @@ interface AnimeWatchAPI {
   getProgress: (anilistId: number) => Promise<unknown[]>
   getEpisodeProgress: (anilistId: number, episodeNumber: number) => Promise<unknown>
   getContinueWatching: () => Promise<unknown[]>
+  toggleEpisodeCompleted: (anilistId: number, episodeNumber: number, completed: boolean) => Promise<void>
   fetchEpisodeSources: (opts: {
     anilistId: number
     title: string

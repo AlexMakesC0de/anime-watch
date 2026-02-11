@@ -184,12 +184,17 @@ export function saveProgress(progress: Record<string, unknown>): void {
   )
 
   if (existing) {
+    // Never un-complete an episode that's already been marked as completed
+    const current = queryOne('SELECT completed FROM watch_progress WHERE id = ?', [existing.id])
+    const wasCompleted = current && (current.completed as number) === 1
+    const newCompleted = wasCompleted ? 1 : progress.completed
+
     execute(
       `UPDATE watch_progress SET
         watched_seconds = ?, total_seconds = ?, completed = ?,
         video_source = COALESCE(?, video_source), watched_at = datetime('now')
        WHERE id = ?`,
-      [progress.watchedSeconds, progress.totalSeconds, progress.completed, progress.videoSource, existing.id]
+      [progress.watchedSeconds, progress.totalSeconds, newCompleted, progress.videoSource, existing.id]
     )
   } else {
     execute(
@@ -260,6 +265,33 @@ export function setProviderMapping(anilistId: number, provider: string, provider
 
 export function clearProviderMapping(anilistId: number): void {
   execute('DELETE FROM provider_cache WHERE anilist_id = ?', [anilistId])
+}
+
+export function toggleEpisodeCompleted(
+  anilistId: number,
+  episodeNumber: number,
+  completed: boolean
+): void {
+  const existing = queryOne(
+    `SELECT wp.id FROM watch_progress wp
+     JOIN anime a ON wp.anime_id = a.id
+     WHERE a.anilist_id = ? AND wp.episode_number = ?`,
+    [anilistId, episodeNumber]
+  )
+
+  if (existing) {
+    execute(
+      `UPDATE watch_progress SET completed = ?, watched_at = datetime('now') WHERE id = ?`,
+      [completed ? 1 : 0, existing.id]
+    )
+  } else if (completed) {
+    // Create a new progress entry marked as completed
+    execute(
+      `INSERT INTO watch_progress (anime_id, episode_number, watched_seconds, total_seconds, completed)
+       VALUES ((SELECT id FROM anime WHERE anilist_id = ?), ?, 0, 0, 1)`,
+      [anilistId, episodeNumber]
+    )
+  }
 }
 
 export function closeDatabase(): void {

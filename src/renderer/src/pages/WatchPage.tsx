@@ -187,7 +187,7 @@ export default function WatchPage(): JSX.Element {
 
   const handleProgress = useCallback(
     async (currentTime: number, duration: number) => {
-      const completed = duration > 0 && currentTime / duration > 0.9 ? 1 : 0
+      const completed = duration > 0 && currentTime / duration > 0.85 ? 1 : 0
       await window.api.saveProgress({
         anilistId,
         episodeNumber,
@@ -216,6 +216,14 @@ export default function WatchPage(): JSX.Element {
       setTimeout(() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`, { replace: true }), 1500)
     }
   }, [anilistId, episodeNumber, videoUrl, anime, navigate])
+
+  const handleToggleEpisodeWatched = useCallback(async (ep: number) => {
+    const prog = allProgress.find((p) => p.episode_number === ep)
+    const newCompleted = !prog?.completed
+    await window.api.toggleEpisodeCompleted(anilistId, ep, newCompleted)
+    const updated = await window.api.getProgress(anilistId) as EpisodeProgress[]
+    setAllProgress(updated)
+  }, [anilistId, allProgress])
 
   const totalEpisodes = anime?.episodes || 0
   const title = anime ? anime.title.english || anime.title.romaji : 'Loading...'
@@ -383,6 +391,11 @@ export default function WatchPage(): JSX.Element {
                   <button
                     key={ep}
                     onClick={() => navigate(`/watch/${anilistId}/${ep}`, { replace: true })}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      handleToggleEpisodeWatched(ep)
+                    }}
+                    title="Right-click to toggle watched"
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                       isActive
                         ? 'bg-accent/20 text-accent'
