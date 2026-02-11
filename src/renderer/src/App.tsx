@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
 import UpdateNotification from './components/UpdateNotification'
+import Tutorial from './components/Tutorial'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import LibraryPage from './pages/LibraryPage'
@@ -29,6 +30,7 @@ export default function App(): JSX.Element {
         </main>
       </div>
       <UpdateNotification />
+      {!isWatchPage && <Tutorial />}
     </div>
   )
 }
