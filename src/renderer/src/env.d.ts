@@ -29,11 +29,14 @@ interface AnimeWatchAPI {
     title: string
     titleEnglish: string | null
     episodeNumber: number
+    audioType?: 'sub' | 'dub'
   }) => Promise<StreamingInfo>
   clearProviderCache: (anilistId: number) => Promise<void>
   minimizeWindow: () => void
   maximizeWindow: () => void
   closeWindow: () => void
+  isMaximized: () => Promise<boolean>
+  onMaximizedChanged: (callback: (maximized: boolean) => void) => () => void
 }
 
 declare global {

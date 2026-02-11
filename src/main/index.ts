@@ -19,6 +19,8 @@ import { fetchEpisodeSources, type FetchEpisodeOpts } from './providers'
 import { startProxyServer, stopProxyServer } from './proxy'
 
 function createWindow(): BrowserWindow {
+  const isMac = process.platform === 'darwin'
+
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -26,8 +28,8 @@ function createWindow(): BrowserWindow {
     minHeight: 700,
     show: false,
     backgroundColor: '#111214',
-    titleBarStyle: 'hiddenInset',
-    frame: false,
+    // macOS: use native hidden title bar; Linux/Windows: completely frameless
+    ...(isMac ? { titleBarStyle: 'hiddenInset' } : { frame: false }),
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -40,6 +42,14 @@ function createWindow(): BrowserWindow {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+  })
+
+  // Track maximize state changes from OS-level events (e.g. double-click title bar, snap)
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window:maximized-changed', true)
+  })
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window:maximized-changed', false)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -88,14 +98,20 @@ function registerIpcHandlers(): void {
   })
   ipcMain.on('window:maximize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    if (win?.isMaximized()) {
+    if (!win) return
+    if (win.isMaximized()) {
       win.unmaximize()
     } else {
-      win?.maximize()
+      win.maximize()
     }
+    // Notify renderer of new state
+    win.webContents.send('window:maximized-changed', win.isMaximized())
   })
   ipcMain.on('window:close', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+  ipcMain.handle('window:is-maximized', (event) => {
+    return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
 }
 

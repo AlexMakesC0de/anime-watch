@@ -1,5 +1,4 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { Maximize, Minimize } from 'lucide-react'
 
 interface EmbedPlayerProps {
   src: string
@@ -29,7 +28,6 @@ export default function EmbedPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const progressIntervalRef = useRef<number | null>(null)
   const lastReportedRef = useRef(0)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   // Inject CSS and JS after the player page loads
@@ -144,23 +142,6 @@ export default function EmbedPlayer({
     }
   }, [isLoading, onProgress, onEnded])
 
-  // Handle fullscreen
-  const toggleFullscreen = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().then(() => setIsFullscreen(true))
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false))
-    }
-  }, [])
-
-  useEffect(() => {
-    const handler = (): void => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', handler)
-    return () => document.removeEventListener('fullscreenchange', handler)
-  }, [])
-
   // Handle webview errors
   const onDidFailLoad = useCallback(
     (_e: Event) => {
@@ -199,24 +180,6 @@ export default function EmbedPlayer({
           </div>
         </div>
       )}
-
-      {/* Title bar */}
-      {title && (
-        <div className="absolute top-0 left-0 right-0 z-20 p-3 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
-          <p className="text-sm text-white/80">
-            {title} {episodeNumber ? `— Episode ${episodeNumber}` : ''}
-          </p>
-        </div>
-      )}
-
-      {/* Fullscreen button */}
-      <button
-        onClick={toggleFullscreen}
-        className="absolute top-3 right-3 z-20 p-2 bg-black/50 rounded hover:bg-black/70 transition"
-        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-      >
-        {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-      </button>
 
       {/* WebView — uses the extractor session which has Cloudflare clearance */}
       <webview

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
 import HomePage from './pages/HomePage'
@@ -8,11 +8,14 @@ import AnimePage from './pages/AnimePage'
 import WatchPage from './pages/WatchPage'
 
 export default function App(): JSX.Element {
+  const location = useLocation()
+  const isWatchPage = location.pathname.startsWith('/watch/')
+
   return (
     <div className="flex flex-col h-screen">
-      <TitleBar />
+      {!isWatchPage && <TitleBar />}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        {!isWatchPage && <Sidebar />}
         <main className="flex-1 overflow-y-auto">
           <Routes>
             <Route path="/" element={<HomePage />} />
