@@ -36,6 +36,7 @@ export default function WatchPage(): JSX.Element {
   const navigate = useNavigate()
   const anilistId = parseInt(id || '0')
   const episodeNumber = parseInt(episode || '1')
+  const isMac = navigator.userAgent.includes('Macintosh')
 
   const [anime, setAnime] = useState<AniListAnime | null>(null)
   const [localAnime, setLocalAnime] = useState<LocalAnime | null>(null)
@@ -233,7 +234,7 @@ export default function WatchPage(): JSX.Element {
         onMouseEnter={handleBarActivity}
         onMouseMove={handleBarActivity}
         onMouseLeave={handleBarActivity}
-        className={`drag-region flex items-center justify-between px-4 py-2 bg-dark-900/90 backdrop-blur-sm border-b border-dark-800 shrink-0 absolute top-0 left-0 right-0 z-30 transition-all duration-300 ${
+        className={`drag-region flex items-center justify-between px-4 py-2 bg-dark-900/90 backdrop-blur-sm border-b border-dark-800 shrink-0 absolute top-0 left-0 right-0 z-30 transition-all duration-300 ${isMac ? 'pl-20' : ''} ${
           controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
         }`}
       >

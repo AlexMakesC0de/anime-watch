@@ -14,7 +14,7 @@ export default function TitleBar(): JSX.Element {
   }, [])
 
   return (
-    <div className="drag-region flex items-center justify-between h-9 bg-dark-950 border-b border-dark-900 px-4 select-none shrink-0">
+    <div className={`drag-region flex items-center justify-between h-9 bg-dark-950 border-b border-dark-900 px-4 select-none shrink-0 ${isMac ? 'pl-20' : ''}`}>
       <div className="flex items-center gap-2">
         <span className="text-accent font-bold text-sm tracking-wide">ANIMEWATCH</span>
       </div>

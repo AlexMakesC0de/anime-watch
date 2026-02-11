@@ -17,6 +17,7 @@ import type { AniListAnime, LocalAnime, WatchStatus, EpisodeProgress } from '@/t
 export default function AnimePage(): JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const isMac = navigator.userAgent.includes('Macintosh')
   const [anime, setAnime] = useState<AniListAnime | null>(null)
   const [localAnime, setLocalAnime] = useState<LocalAnime | null>(null)
   const [episodeProgress, setEpisodeProgress] = useState<EpisodeProgress[]>([])
@@ -143,7 +144,7 @@ export default function AnimePage(): JSX.Element {
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 btn-ghost bg-black/40 backdrop-blur-sm"
+          className={`absolute top-4 btn-ghost bg-black/40 backdrop-blur-sm ${isMac ? 'left-20' : 'left-4'}`}
         >
           <ArrowLeft size={18} />
           Back
