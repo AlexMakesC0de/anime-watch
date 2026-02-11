@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4c4d52 transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #4c4d52;
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #696a71;
+  }
+}
+
+@layer components {
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  .anime-card {
+    @apply relative overflow-hidden rounded-lg bg-dark-900 transition-all duration-200;
+  }
+
+  .anime-card:hover {
+    @apply ring-2 ring-accent/50 scale-[1.02];
+  }
+
+  .anime-card:hover .anime-card-overlay {
+    @apply opacity-100;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .btn-primary {
+    @apply bg-accent hover:bg-accent-hover text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-150 flex items-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply bg-dark-800 hover:bg-dark-700 text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-150 flex items-center gap-2;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-dark-800 text-dark-300 hover:text-white font-medium px-3 py-2 rounded-lg
+           transition-colors duration-150 flex items-center gap-2;
+  }
+
+  .input-field {
+    @apply w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2.5
+           text-white placeholder-dark-500 outline-none
+           focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all;
+  }
+
+  .progress-bar {
+    @apply h-1 bg-dark-700 rounded-full overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full bg-accent rounded-full transition-all duration-300;
+  }
+}
