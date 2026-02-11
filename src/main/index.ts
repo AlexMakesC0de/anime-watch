@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import {
   initDatabase,
   closeDatabase,
@@ -66,6 +67,31 @@ function createWindow(): BrowserWindow {
   return mainWindow
 }
 
+// ─── Auto Updater ────────────────────────────────────────────────
+
+function setupAutoUpdater(): void {
+  // Don't auto-install — let the user decide
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version)
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.webContents.send('updater:update-available', info.version)
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version)
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.webContents.send('updater:update-downloaded', info.version)
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-updater error:', err.message)
+  })
+
+  autoUpdater.checkForUpdates()
+}
+
 // ─── IPC Handlers ────────────────────────────────────────────────
 
 function registerIpcHandlers(): void {
@@ -113,6 +139,11 @@ function registerIpcHandlers(): void {
   ipcMain.handle('window:is-maximized', (event) => {
     return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
+
+  // ── Auto Updater ──────────────────────────────────────────
+  ipcMain.on('updater:restart', () => {
+    autoUpdater.quitAndInstall(false, true)
+  })
 }
 
 // ─── App Lifecycle ─────────────────────────────────────────────
@@ -128,6 +159,11 @@ app.whenReady().then(async () => {
   await startProxyServer()
   registerIpcHandlers()
   createWindow()
+  
+  // Check for updates after window is ready (production only)
+  if (!is.dev) {
+    setupAutoUpdater()
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

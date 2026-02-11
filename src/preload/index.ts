@@ -34,7 +34,20 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, maximized: boolean): void => callback(maximized)
     ipcRenderer.on('window:maximized-changed', handler)
     return () => ipcRenderer.removeListener('window:maximized-changed', handler)
-  }
+  },
+
+  // ── Auto Updater ───────────────────────────────
+  onUpdateAvailable: (callback: (version: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, version: string): void => callback(version)
+    ipcRenderer.on('updater:update-available', handler)
+    return () => ipcRenderer.removeListener('updater:update-available', handler)
+  },
+  onUpdateDownloaded: (callback: (version: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, version: string): void => callback(version)
+    ipcRenderer.on('updater:update-downloaded', handler)
+    return () => ipcRenderer.removeListener('updater:update-downloaded', handler)
+  },
+  restartToUpdate: () => ipcRenderer.send('updater:restart')
 }
 
 if (process.contextIsolated) {

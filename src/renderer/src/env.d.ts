@@ -37,6 +37,9 @@ interface AnimeWatchAPI {
   closeWindow: () => void
   isMaximized: () => Promise<boolean>
   onMaximizedChanged: (callback: (maximized: boolean) => void) => () => void
+  onUpdateAvailable: (callback: (version: string) => void) => () => void
+  onUpdateDownloaded: (callback: (version: string) => void) => () => void
+  restartToUpdate: () => void
 }
 
 declare global {

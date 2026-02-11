@@ -24,5 +24,6 @@ win:
     - nsis
 npmRebuild: true
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: AlexMakesC0de
+  repo: anime-watch
