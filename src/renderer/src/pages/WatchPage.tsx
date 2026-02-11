@@ -212,7 +212,7 @@ export default function WatchPage(): JSX.Element {
     // Auto-advance to next episode after a short delay
     const totalEps = anime?.episodes || 0
     if (episodeNumber < totalEps) {
-      setTimeout(() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`), 1500)
+      setTimeout(() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`, { replace: true }), 1500)
     }
   }, [anilistId, episodeNumber, videoUrl, anime, navigate])
 
@@ -239,7 +239,7 @@ export default function WatchPage(): JSX.Element {
       >
         <div className="no-drag flex items-center gap-3">
           <button
-            onClick={() => navigate(`/anime/${anilistId}`)}
+            onClick={() => navigate(`/anime/${anilistId}`, { replace: true })}
             className="btn-ghost text-sm"
           >
             <ArrowLeft size={16} />
@@ -281,7 +281,7 @@ export default function WatchPage(): JSX.Element {
 
           {/* Episode navigation */}
           <button
-            onClick={() => navigate(`/watch/${anilistId}/${episodeNumber - 1}`)}
+            onClick={() => navigate(`/watch/${anilistId}/${episodeNumber - 1}`, { replace: true })}
             disabled={episodeNumber <= 1}
             className="btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
           >
@@ -296,7 +296,7 @@ export default function WatchPage(): JSX.Element {
             {episodeNumber} / {totalEpisodes || '?'}
           </button>
           <button
-            onClick={() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`)}
+            onClick={() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`, { replace: true })}
             disabled={totalEpisodes > 0 && episodeNumber >= totalEpisodes}
             className="btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
           >
@@ -327,10 +327,10 @@ export default function WatchPage(): JSX.Element {
               initialTime={episodeProgress?.watched_seconds || 0}
               onProgress={handleProgress}
               onEnded={handleEnded}
-              onPrevious={episodeNumber > 1 ? () => navigate(`/watch/${anilistId}/${episodeNumber - 1}`) : undefined}
+              onPrevious={episodeNumber > 1 ? () => navigate(`/watch/${anilistId}/${episodeNumber - 1}`, { replace: true }) : undefined}
               onNext={
                 totalEpisodes > 0 && episodeNumber < totalEpisodes
-                  ? () => navigate(`/watch/${anilistId}/${episodeNumber + 1}`)
+                  ? () => navigate(`/watch/${anilistId}/${episodeNumber + 1}`, { replace: true })
                   : undefined
               }
               onError={(msg) => setProviderError(msg)}
@@ -381,7 +381,7 @@ export default function WatchPage(): JSX.Element {
                 return (
                   <button
                     key={ep}
-                    onClick={() => navigate(`/watch/${anilistId}/${ep}`)}
+                    onClick={() => navigate(`/watch/${anilistId}/${ep}`, { replace: true })}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                       isActive
                         ? 'bg-accent/20 text-accent'
