@@ -5,13 +5,14 @@ import {
   setProviderMapping
 } from '../database'
 
-export type { VideoSource, StreamingInfo, ProviderResult } from './types'
+export type { VideoSource, StreamingInfo, ProviderResult, AudioType } from './types'
 
 export interface FetchEpisodeOpts {
   anilistId: number
   title: string
   titleEnglish: string | null
   episodeNumber: number
+  audioType?: 'sub' | 'dub'
 }
 
 /**
@@ -23,10 +24,11 @@ export interface FetchEpisodeOpts {
  * 3. Fetch the episode streaming URLs
  */
 export async function fetchEpisodeSources(opts: FetchEpisodeOpts): Promise<StreamingInfo> {
-  const { anilistId, title, titleEnglish, episodeNumber } = opts
+  const { anilistId, title, titleEnglish, episodeNumber, audioType = 'sub' } = opts
 
-  // 1. Check cached mapping
-  let slug = getProviderMapping(anilistId, 'gogoanime')
+  // 1. Check cached mapping (separate cache keys for sub vs dub)
+  const providerKey = audioType === 'dub' ? 'gogoanime-dub' : 'gogoanime'
+  let slug = getProviderMapping(anilistId, providerKey)
 
   // 2. If no mapping, search and cache
   if (!slug) {
@@ -42,7 +44,7 @@ export async function fetchEpisodeSources(opts: FetchEpisodeOpts): Promise<Strea
     for (const term of searchTerms) {
       results = await gogoanime.search(term)
       if (results.length > 0) {
-        best = gogoanime.findBestMatch(results, title, titleEnglish)
+        best = gogoanime.findBestMatch(results, title, titleEnglish, audioType)
         if (best) break
       }
     }
@@ -58,7 +60,7 @@ export async function fetchEpisodeSources(opts: FetchEpisodeOpts): Promise<Strea
         if (simplified && simplified !== term) {
           results = await gogoanime.search(simplified)
           if (results.length > 0) {
-            best = gogoanime.findBestMatch(results, title, titleEnglish)
+            best = gogoanime.findBestMatch(results, title, titleEnglish, audioType)
             if (best) break
           }
         }
@@ -75,8 +77,8 @@ export async function fetchEpisodeSources(opts: FetchEpisodeOpts): Promise<Strea
     }
 
     slug = best.id
-    setProviderMapping(anilistId, 'gogoanime', slug)
-    console.log(`[Provider] Mapped AniList ${anilistId} → gogoanime/${slug}`)
+    setProviderMapping(anilistId, providerKey, slug)
+    console.log(`[Provider] Mapped AniList ${anilistId} → ${providerKey}/${slug}`)
   }
 
   // 3. Fetch episode sources

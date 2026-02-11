@@ -334,7 +334,8 @@ async function extractViaHiddenWindow(
 export function findBestMatch(
   results: ProviderResult[],
   title: string,
-  titleEnglish?: string | null
+  titleEnglish?: string | null,
+  audioType: 'sub' | 'dub' = 'sub'
 ): ProviderResult | null {
   if (results.length === 0) return null
 
@@ -345,10 +346,18 @@ export function findBestMatch(
       .replace(/\s+/g, ' ')
       .trim()
 
+  const isDub = (r: ProviderResult): boolean =>
+    r.title.toLowerCase().includes('(dub)') || r.id.endsWith('-dub')
+
+  // Filter results by audio type: dub entries for dub, non-dub for sub
+  const filtered = results.filter((r) => (audioType === 'dub' ? isDub(r) : !isDub(r)))
+  // Fall back to all results if nothing matches the preferred audio type
+  const candidates = filtered.length > 0 ? filtered : results
+
   const target1 = normalize(title)
   const target2 = titleEnglish ? normalize(titleEnglish) : ''
 
-  const scored = results.map((r) => {
+  const scored = candidates.map((r) => {
     const norm = normalize(r.title)
     let score = 0
 
@@ -365,10 +374,6 @@ export function findBestMatch(
           ? words2.filter((w) => resultWords.includes(w)).length / words2.length
           : 0
       score = Math.max(overlap1, overlap2) * 60
-    }
-
-    if (r.title.toLowerCase().includes('(dub)') || r.id.endsWith('-dub')) {
-      score -= 10
     }
 
     return { result: r, score }

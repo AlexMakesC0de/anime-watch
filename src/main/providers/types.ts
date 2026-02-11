@@ -13,6 +13,8 @@ export interface StreamingInfo {
   embedUrl?: string
 }
 
+export type AudioType = 'sub' | 'dub'
+
 export interface ProviderResult {
   id: string
   title: string

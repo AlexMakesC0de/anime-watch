@@ -10,12 +10,29 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
-  Trash2
+  Trash2,
+  Languages
 } from 'lucide-react'
 import VideoPlayer from '@/components/VideoPlayer'
 import EmbedPlayer from '@/components/EmbedPlayer'
 import { getAnimeDetails, stripHtml } from '@/services/anilist'
 import type { AniListAnime, LocalAnime, EpisodeProgress } from '@/types'
+
+type AudioType = 'sub' | 'dub'
+
+function getStoredAudioType(anilistId: number): AudioType {
+  try {
+    return (localStorage.getItem(`audio-pref-${anilistId}`) as AudioType) || 'sub'
+  } catch {
+    return 'sub'
+  }
+}
+
+function storeAudioType(anilistId: number, audioType: AudioType): void {
+  try {
+    localStorage.setItem(`audio-pref-${anilistId}`, audioType)
+  } catch { /* ignore */ }
+}
 
 export default function WatchPage(): JSX.Element {
   const { id, episode } = useParams<{ id: string; episode: string }>()
@@ -30,7 +47,7 @@ export default function WatchPage(): JSX.Element {
   const [embedUrl, setEmbedUrl] = useState('')
   const [showEpisodeList, setShowEpisodeList] = useState(false)
   const [allProgress, setAllProgress] = useState<EpisodeProgress[]>([])
-
+  const [audioType, setAudioType] = useState<AudioType>(() => getStoredAudioType(anilistId))
   // Provider state
   const [providerLoading, setProviderLoading] = useState(false)
   const [providerError, setProviderError] = useState<string | null>(null)
@@ -62,7 +79,7 @@ export default function WatchPage(): JSX.Element {
       } else {
         setVideoUrl('')
         setEmbedUrl('')
-        fetchFromProvider(details)
+        fetchFromProvider(details, audioType)
       }
     } catch (error) {
       console.error('Failed to load watch data:', error)
@@ -70,7 +87,7 @@ export default function WatchPage(): JSX.Element {
   }
 
   // Auto-fetch episode from streaming provider
-  async function fetchFromProvider(details: AniListAnime | null = anime): Promise<void> {
+  async function fetchFromProvider(details: AniListAnime | null = anime, audio: AudioType = audioType): Promise<void> {
     if (!details) return
     // Prevent duplicate concurrent fetches (React StrictMode double-invoke)
     if (fetchingRef.current) return
@@ -85,7 +102,8 @@ export default function WatchPage(): JSX.Element {
         anilistId: details.id,
         title: details.title.romaji || details.title.english || '',
         titleEnglish: details.title.english || null,
-        episodeNumber
+        episodeNumber,
+        audioType: audio
       })
 
       // If an embed URL is available, use the webview-based player
@@ -112,6 +130,14 @@ export default function WatchPage(): JSX.Element {
   async function handleClearCache(): Promise<void> {
     await window.api.clearProviderCache(anilistId)
     fetchFromProvider()
+  }
+
+  function handleAudioTypeChange(newType: AudioType): void {
+    if (newType === audioType) return
+    setAudioType(newType)
+    storeAudioType(anilistId, newType)
+    // Re-fetch with new audio type (clears current source)
+    fetchFromProvider(anime, newType)
   }
 
   // Auto-add to library as "WATCHING" when user starts watching
@@ -201,6 +227,32 @@ export default function WatchPage(): JSX.Element {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Sub / Dub toggle */}
+          <div className="flex items-center gap-1 bg-dark-800 rounded-lg p-0.5">
+            <button
+              onClick={() => handleAudioTypeChange('sub')}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                audioType === 'sub'
+                  ? 'bg-accent text-white'
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              SUB
+            </button>
+            <button
+              onClick={() => handleAudioTypeChange('dub')}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                audioType === 'dub'
+                  ? 'bg-accent text-white'
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              DUB
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-dark-700" />
+
           {/* Episode navigation */}
           <button
             onClick={() => navigate(`/watch/${anilistId}/${episodeNumber - 1}`)}
