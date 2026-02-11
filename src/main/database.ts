@@ -27,6 +27,7 @@ export async function initDatabase(): Promise<void> {
   }
 
   createTables()
+  migrateDubCache()
   persistToFile()
 
   // Auto-save every 30 seconds
@@ -86,6 +87,21 @@ function createTables(): void {
   try { db.run('CREATE INDEX idx_anime_anilist_id ON anime(anilist_id)') } catch { /* exists */ }
   try { db.run('CREATE INDEX idx_progress_anime ON watch_progress(anime_id)') } catch { /* exists */ }
   try { db.run('CREATE INDEX idx_progress_watched ON watch_progress(watched_at)') } catch { /* exists */ }
+}
+
+function migrateDubCache(): void {
+  // One-time migration: Clear all gogoanime-dub cache entries to force re-matching
+  // with the improved scoring algorithm (fixes sequels being matched instead of base series)
+  try {
+    const result = db.exec("SELECT COUNT(*) as count FROM provider_cache WHERE provider = 'gogoanime-dub'")
+    const count = result[0]?.values[0]?.[0] as number || 0
+    if (count > 0) {
+      db.run("DELETE FROM provider_cache WHERE provider = 'gogoanime-dub'")
+      console.log(`[Database] Cleared ${count} stale dub cache entries`)
+    }
+  } catch (err) {
+    console.warn('[Database] Migration failed:', err)
+  }
 }
 
 function persistToFile(): void {

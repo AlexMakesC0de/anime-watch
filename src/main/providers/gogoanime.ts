@@ -376,9 +376,24 @@ export function findBestMatch(
       score = Math.max(overlap1, overlap2) * 60
     }
 
+    // Penalize results whose normalized title is significantly longer than the
+    // target — these are likely sequels/spinoffs (e.g. "Tokyo Ghoul:re" when
+    // searching for "Tokyo Ghoul"). The penalty grows with the length difference.
+    const targetLen = target2 ? Math.min(target1.length, target2.length) : target1.length
+    const lenDiff = norm.length - targetLen
+    if (lenDiff > 0 && score < 100) {
+      score -= Math.min(lenDiff * 2, 20)
+    }
+
     return { result: r, score }
   })
 
-  scored.sort((a, b) => b.score - a.score)
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    // Tie-break: prefer shorter titles (closer to exact match)
+    const aNorm = normalize(a.result.title)
+    const bNorm = normalize(b.result.title)
+    return aNorm.length - bNorm.length
+  })
   return scored[0]?.score > 30 ? scored[0].result : null
 }

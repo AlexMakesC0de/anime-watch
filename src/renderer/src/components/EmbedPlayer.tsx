@@ -142,6 +142,32 @@ export default function EmbedPlayer({
     }
   }, [isLoading, onProgress, onEnded])
 
+  // Handle webview fullscreen requests (e.g. user clicks fullscreen button inside the video)
+  useEffect(() => {
+    const webview = webviewRef.current
+    const container = containerRef.current
+    if (!webview || !container) return
+
+    const handleEnterFS = (): void => {
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(() => {})
+      }
+    }
+    const handleLeaveFS = (): void => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
+    }
+
+    webview.addEventListener('enter-html-full-screen', handleEnterFS)
+    webview.addEventListener('leave-html-full-screen', handleLeaveFS)
+
+    return () => {
+      webview.removeEventListener('enter-html-full-screen', handleEnterFS)
+      webview.removeEventListener('leave-html-full-screen', handleLeaveFS)
+    }
+  }, [])
+
   // Handle webview errors
   const onDidFailLoad = useCallback(
     (_e: Event) => {
@@ -190,6 +216,7 @@ export default function EmbedPlayer({
         allowpopups={'false' as unknown as boolean}
         // @ts-ignore - webview attributes
         disablewebsecurity="true"
+        allowFullScreen
       />
     </div>
   )
