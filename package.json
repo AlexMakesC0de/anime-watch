@@ -1,6 +1,6 @@
 {
   "name": "anime-watch",
-  "version": "1.1.1",
+  "version": "1.1.3",
   "description": "Watch and track your anime series — never lose your place again.",
   "main": "./out/main/index.js",
   "scripts": {
@@ -8,7 +8,9 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
-    "package": "electron-vite build && electron-builder --config electron-builder.yml"
+    "package": "electron-vite build && electron-builder --config electron-builder.yml",
+    "publish": "electron-vite build && electron-builder --config electron-builder.yml --publish always",
+    "release:patch": "npm version patch --no-git-tag-version && npm run publish"
   },
   "dependencies": {
     "sql.js": "^1.11.0",
