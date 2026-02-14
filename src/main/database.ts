@@ -294,6 +294,33 @@ export function toggleEpisodeCompleted(
   }
 }
 
+export function markAllEpisodesCompleted(anilistId: number, totalEpisodes: number): void {
+  const animeRow = queryOne('SELECT id FROM anime WHERE anilist_id = ?', [anilistId])
+  if (!animeRow) return
+
+  const animeId = animeRow.id as number
+
+  for (let ep = 1; ep <= totalEpisodes; ep++) {
+    const existing = queryOne(
+      'SELECT id FROM watch_progress WHERE anime_id = ? AND episode_number = ?',
+      [animeId, ep]
+    )
+    if (existing) {
+      db.run(
+        `UPDATE watch_progress SET completed = 1, watched_at = datetime('now') WHERE id = ?`,
+        [existing.id]
+      )
+    } else {
+      db.run(
+        `INSERT INTO watch_progress (anime_id, episode_number, watched_seconds, total_seconds, completed)
+         VALUES (?, ?, 0, 0, 1)`,
+        [animeId, ep]
+      )
+    }
+  }
+  persistToFile()
+}
+
 export function closeDatabase(): void {
   if (saveTimer) clearInterval(saveTimer)
   if (db) {

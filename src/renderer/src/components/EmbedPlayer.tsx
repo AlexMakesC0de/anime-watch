@@ -5,6 +5,8 @@ interface EmbedPlayerProps {
   title?: string
   episodeNumber?: number
   initialTime?: number
+  fullscreenTarget?: React.RefObject<HTMLElement | null>
+  disableInteractions?: boolean
   onProgress?: (currentTime: number, duration: number) => void
   onEnded?: () => void
   onError?: (message: string) => void
@@ -20,6 +22,8 @@ export default function EmbedPlayer({
   title,
   episodeNumber,
   initialTime = 0,
+  fullscreenTarget,
+  disableInteractions = false,
   onProgress,
   onEnded,
   onError
@@ -30,6 +34,27 @@ export default function EmbedPlayer({
   const lastReportedRef = useRef(0)
   const endedFiredRef = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
+
+  const dispatchAutoplayGesture = useCallback(() => {
+    const webview = webviewRef.current
+    if (!webview) return
+
+    const bounds = webview.getBoundingClientRect()
+    const x = Math.max(1, Math.floor(bounds.width / 2))
+    const y = Math.max(1, Math.floor(bounds.height / 2))
+
+    try {
+      webview.focus()
+      webview.sendInputEvent({ type: 'mouseMove', x, y })
+      webview.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 })
+      webview.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 })
+      webview.sendInputEvent({ type: 'keyDown', keyCode: 'Space' })
+      webview.sendInputEvent({ type: 'char', keyCode: ' ' })
+      webview.sendInputEvent({ type: 'keyUp', keyCode: 'Space' })
+    } catch {
+      // ignore gesture injection failures
+    }
+  }, [])
 
   // Inject CSS and JS after the player page loads
   const onDomReady = useCallback(() => {
@@ -58,6 +83,7 @@ export default function EmbedPlayer({
     const initScript = `
       (function() {
         let reported = false;
+        let iframePatched = false;
         function findVideo() {
           const videos = document.querySelectorAll('video');
           // Also check iframes
@@ -74,19 +100,69 @@ export default function EmbedPlayer({
           return videos[0];
         }
 
-        // Poll for video element
+        function patchIframeAutoplay() {
+          if (iframePatched) return;
+          const iframes = document.querySelectorAll('iframe[src]');
+          if (!iframes.length) return;
+          iframes.forEach(function(iframe) {
+            try {
+              const src = iframe.getAttribute('src');
+              if (!src) return;
+              const u = new URL(src, location.href);
+              u.searchParams.set('autoplay', '1');
+              u.searchParams.set('autoPlay', '1');
+              u.searchParams.set('mute', '1');
+              u.searchParams.set('muted', '1');
+              const next = u.toString();
+              if (next !== src) iframe.setAttribute('src', next);
+            } catch(e) {}
+          });
+          iframePatched = true;
+        }
+
+        // Poll for video element and keep retrying play until it works
+        let playing = false;
         const checkInterval = setInterval(() => {
+          if (playing) { clearInterval(checkInterval); return; }
+
+          patchIframeAutoplay();
+
+          // Also try clicking any play button overlays the player might have
+          const playBtns = document.querySelectorAll(
+            '.jw-icon-playback, .vjs-big-play-button, .plyr__control--overlaid, ' +
+            'button[aria-label="Play"], [class*="play-button"], [class*="play_button"], ' +
+            '[class*="playBtn"], .btn-play, #play-btn'
+          );
+          playBtns.forEach(function(btn) { btn.click(); });
+
           const video = findVideo();
           if (!video) return;
 
-          // Set initial time
+          // Set initial time or nudge to 0.1s to trigger loading
           if (${initialTime} > 0 && !reported) {
             video.currentTime = ${initialTime};
+          } else if (!reported) {
+            video.currentTime = 0.1;
           }
           reported = true;
 
-          // Remove the interval once we have the video
-          clearInterval(checkInterval);
+          // Try to play
+          video.muted = true;
+          const p = video.play();
+          if (p && p.then) {
+            p.then(function() { playing = true; }).catch(function() {
+              // Fallback: try muted
+              video.muted = true;
+              video.play().then(function() { playing = true; }).catch(function() {});
+            });
+          }
+
+          if (playing) {
+            setTimeout(function() { video.muted = false; }, 300);
+          }
+
+          // Also dispatch a click on the video in case the player needs it
+          video.click();
         }, 500);
 
         // Clean up after 30 seconds
@@ -157,8 +233,9 @@ export default function EmbedPlayer({
     if (!webview || !container) return
 
     const handleEnterFS = (): void => {
-      if (!document.fullscreenElement) {
-        container.requestFullscreen().catch(() => {})
+      const target = fullscreenTarget?.current || container
+      if (!document.fullscreenElement && target) {
+        target.requestFullscreen().catch(() => {})
       }
     }
     const handleLeaveFS = (): void => {
@@ -203,6 +280,46 @@ export default function EmbedPlayer({
     }
   }, [onDomReady, onDidFailLoad])
 
+  useEffect(() => {
+    const webview = webviewRef.current
+    if (!webview) return
+
+    let attemptCount = 0
+    const maxAttempts = 8
+
+    const runAttempt = (): void => {
+      if (attemptCount >= maxAttempts) return
+      attemptCount += 1
+
+      dispatchAutoplayGesture()
+
+      webview.executeJavaScript(`
+        (function() {
+          const video = document.querySelector('video');
+          if (!video) return false;
+          if (video.paused) {
+            try {
+              if (video.currentTime < 0.1) video.currentTime = 0.1;
+              video.play();
+            } catch {}
+          }
+          return !video.paused;
+        })();
+      `).then((isPlaying: boolean) => {
+        if (!isPlaying && attemptCount < maxAttempts) {
+          window.setTimeout(runAttempt, 700)
+        }
+      }).catch(() => {
+        if (attemptCount < maxAttempts) {
+          window.setTimeout(runAttempt, 700)
+        }
+      })
+    }
+
+    const timeoutId = window.setTimeout(runAttempt, 900)
+    return () => window.clearTimeout(timeoutId)
+  }, [src, dispatchAutoplayGesture])
+
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black">
       {/* Loading overlay */}
@@ -220,11 +337,13 @@ export default function EmbedPlayer({
         ref={webviewRef as React.RefObject<Electron.WebviewTag>}
         src={src}
         partition="persist:extractor"
-        style={{ width: '100%', height: '100%', border: 'none' }}
+        style={{ width: '100%', height: '100%', border: 'none', pointerEvents: disableInteractions ? 'none' : 'auto' }}
         allowpopups={'false' as unknown as boolean}
         // @ts-ignore - webview attributes
         disablewebsecurity="true"
         allowFullScreen
+        // @ts-ignore
+        webpreferences="autoplay=true"
       />
     </div>
   )

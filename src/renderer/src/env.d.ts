@@ -25,6 +25,7 @@ interface AnimeWatchAPI {
   getEpisodeProgress: (anilistId: number, episodeNumber: number) => Promise<unknown>
   getContinueWatching: () => Promise<unknown[]>
   toggleEpisodeCompleted: (anilistId: number, episodeNumber: number, completed: boolean) => Promise<void>
+  markAllEpisodesCompleted: (anilistId: number, totalEpisodes: number) => Promise<void>
   fetchEpisodeSources: (opts: {
     anilistId: number
     title: string
@@ -38,6 +39,7 @@ interface AnimeWatchAPI {
   closeWindow: () => void
   isMaximized: () => Promise<boolean>
   onMaximizedChanged: (callback: (maximized: boolean) => void) => () => void
+  getAppVersion: () => Promise<string>
   onUpdateAvailable: (callback: (version: string) => void) => () => void
   onUpdateDownloaded: (callback: (version: string) => void) => () => void
   restartToUpdate: () => void

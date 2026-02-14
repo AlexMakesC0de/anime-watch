@@ -8,7 +8,10 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
-  Trash2
+  Trash2,
+  Minus,
+  Square,
+  X
 } from 'lucide-react'
 import VideoPlayer from '@/components/VideoPlayer'
 import EmbedPlayer from '@/components/EmbedPlayer'
@@ -31,6 +34,19 @@ function storeAudioType(anilistId: number, audioType: AudioType): void {
   } catch { /* ignore */ }
 }
 
+function withAutoplayParams(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl)
+    url.searchParams.set('autoplay', '1')
+    url.searchParams.set('autoPlay', '1')
+    url.searchParams.set('mute', '1')
+    url.searchParams.set('muted', '1')
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
 export default function WatchPage(): JSX.Element {
   const { id, episode } = useParams<{ id: string; episode: string }>()
   const navigate = useNavigate()
@@ -50,17 +66,22 @@ export default function WatchPage(): JSX.Element {
   const [providerLoading, setProviderLoading] = useState(false)
   const [providerError, setProviderError] = useState<string | null>(null)
   const fetchingRef = useRef(false)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   // ─── Auto-hide controls ────────────────────────────────────
   // The <webview> swallows mouse events, so window-level mousemove won't fire
   // over the video. We use an invisible trigger zone at the top edge (always
   // captures pointer) plus mouseenter/mouseleave on the bar itself.
   const [controlsVisible, setControlsVisible] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const startHideTimer = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2000)
+    hideTimerRef.current = setTimeout(() => {
+      setControlsVisible(false)
+      setShowEpisodeList(false) // Also hide episode list
+    }, 2000)
   }, [])
 
   const handleTriggerEnter = useCallback(() => {
@@ -72,6 +93,15 @@ export default function WatchPage(): JSX.Element {
     setControlsVisible(true)
     startHideTimer()
   }, [startHideTimer])
+
+  // Track fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = (): void => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -132,8 +162,9 @@ export default function WatchPage(): JSX.Element {
 
       // If an embed URL is available, use the webview-based player
       if (result.embedUrl) {
-        console.log('[WatchPage] Using embed player:', result.embedUrl)
-        setEmbedUrl(result.embedUrl)
+        const embedWithAutoplay = withAutoplayParams(result.embedUrl)
+        console.log('[WatchPage] Using embed player:', embedWithAutoplay)
+        setEmbedUrl(embedWithAutoplay)
       } else if (result.sources && result.sources.length > 0) {
         // Prefer HLS source, fall back to first available
         const best = result.sources.find((s: { isM3U8: boolean }) => s.isM3U8) || result.sources[0]
@@ -229,11 +260,12 @@ export default function WatchPage(): JSX.Element {
   const title = anime ? anime.title.english || anime.title.romaji : 'Loading...'
 
   return (
-    <div className="flex flex-col h-full bg-dark-950 relative">
+    <div ref={pageRef} className="flex flex-col h-full bg-dark-950 relative">
       {/* Invisible trigger zone — always captures pointer events at the top edge
-          so hovering near the top reveals the bar even over the webview */}
+          so hovering near the top reveals the bar even over the webview.
+          Larger in fullscreen to make it easier to trigger. */}
       <div
-        className="absolute top-0 left-0 right-0 h-5 z-40"
+        className={`absolute top-0 left-0 right-0 z-40 ${isFullscreen ? 'h-12' : 'h-5'} ${controlsVisible ? 'pointer-events-none' : ''}`}
         onMouseEnter={handleTriggerEnter}
       />
 
@@ -246,10 +278,10 @@ export default function WatchPage(): JSX.Element {
           controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
         }`}
       >
-        <div className="no-drag flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(`/anime/${anilistId}`, { replace: true })}
-            className="btn-ghost text-sm"
+            className="no-drag btn-ghost text-sm"
           >
             <ArrowLeft size={16} />
             Back
@@ -261,9 +293,9 @@ export default function WatchPage(): JSX.Element {
           <span className="text-accent text-sm font-semibold">EP {episodeNumber}</span>
         </div>
 
-        <div className="no-drag flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {/* Sub / Dub toggle */}
-          <div className="flex items-center gap-1 bg-dark-800 rounded-lg p-0.5">
+          <div className="no-drag flex items-center gap-1 bg-dark-800 rounded-lg p-0.5">
             <button
               onClick={() => handleAudioTypeChange('sub')}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -292,14 +324,14 @@ export default function WatchPage(): JSX.Element {
           <button
             onClick={() => navigate(`/watch/${anilistId}/${episodeNumber - 1}`, { replace: true })}
             disabled={episodeNumber <= 1}
-            className="btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+            className="no-drag btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft size={16} />
             Prev
           </button>
           <button
             onClick={() => setShowEpisodeList(!showEpisodeList)}
-            className="btn-ghost text-sm"
+            className="no-drag btn-ghost text-sm"
           >
             <List size={16} />
             {episodeNumber} / {totalEpisodes || '?'}
@@ -307,28 +339,97 @@ export default function WatchPage(): JSX.Element {
           <button
             onClick={() => navigate(`/watch/${anilistId}/${episodeNumber + 1}`, { replace: true })}
             disabled={totalEpisodes > 0 && episodeNumber >= totalEpisodes}
-            className="btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+            className="no-drag btn-ghost text-sm disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Next
             <ChevronRight size={16} />
           </button>
+
+          {/* Window controls — only show on non-macOS (macOS has native controls) */}
+          {!isMac && (
+            <>
+              <div className="h-5 w-px bg-dark-700 ml-2" />
+              <div className="no-drag flex items-center">
+                <button
+                  onClick={() => window.api.minimizeWindow()}
+                  className="p-2 hover:bg-dark-700 rounded transition-colors"
+                  title="Minimize"
+                >
+                  <Minus size={14} className="text-dark-300" />
+                </button>
+                <button
+                  onClick={() => window.api.maximizeWindow()}
+                  className="p-2 hover:bg-dark-700 rounded transition-colors"
+                  title="Maximize"
+                >
+                  <Square size={12} className="text-dark-300" />
+                </button>
+                <button
+                  onClick={() => window.api.closeWindow()}
+                  className="p-2 hover:bg-red-500/20 rounded transition-colors"
+                  title="Close"
+                >
+                  <X size={14} className="text-dark-300 hover:text-red-400" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Video area */}
-        <div className="flex-1 flex flex-col relative">
+        <div className={`flex-1 flex flex-col relative transition-all duration-300 ${controlsVisible ? 'mt-11' : 'mt-0'}`}>
+          {/* Centered loading spinner — shown while fetching episode sources */}
+          {providerLoading && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 bg-black">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 size={40} className="animate-spin text-accent" />
+                <p className="text-sm text-dark-400">Loading episode...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Centered error — shown when provider fails */}
+          {providerError && !providerLoading && !embedUrl && !videoUrl && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 bg-black">
+              <div className="flex flex-col items-center gap-4">
+                <AlertCircle size={40} className="text-red-400" />
+                <p className="text-sm text-red-400 max-w-xs text-center">{providerError}</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => fetchFromProvider()}
+                    className="btn-ghost text-sm flex items-center gap-2 text-dark-300 hover:text-white"
+                  >
+                    <RefreshCw size={14} />
+                    Retry
+                  </button>
+                  <button
+                    onClick={handleClearCache}
+                    className="btn-ghost text-sm flex items-center gap-2 text-dark-300 hover:text-white"
+                  >
+                    <Trash2 size={14} />
+                    Re-search
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Player — only rendered when we have a source URL */}
           {embedUrl ? (
             <EmbedPlayer
               src={embedUrl}
               title={title}
               episodeNumber={episodeNumber}
               initialTime={episodeProgress?.watched_seconds || 0}
+              fullscreenTarget={pageRef}
+              disableInteractions={controlsVisible}
               onProgress={handleProgress}
               onEnded={handleEnded}
               onError={(msg) => setProviderError(msg)}
             />
-          ) : (
+          ) : videoUrl ? (
             <VideoPlayer
               src={videoUrl}
               title={title}
@@ -344,35 +445,7 @@ export default function WatchPage(): JSX.Element {
               }
               onError={(msg) => setProviderError(msg)}
             />
-          )}
-
-          {/* Loading / error indicator — shown as a small overlay when fetching */}
-          {providerLoading && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-dark-900/90 backdrop-blur-sm rounded-lg px-4 py-2 text-dark-400 text-sm">
-              <Loader2 size={16} className="animate-spin text-accent" />
-              <span>Fetching episode...</span>
-            </div>
-          )}
-          {providerError && !providerLoading && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-dark-900/90 backdrop-blur-sm rounded-lg px-4 py-2 text-red-400 text-sm">
-              <AlertCircle size={16} />
-              <span className="max-w-xs truncate">{providerError}</span>
-              <button
-                onClick={() => fetchFromProvider()}
-                className="btn-ghost text-xs flex items-center gap-1"
-              >
-                <RefreshCw size={12} />
-                Retry
-              </button>
-              <button
-                onClick={handleClearCache}
-                className="btn-ghost text-xs flex items-center gap-1"
-              >
-                <Trash2 size={12} />
-                Re-search
-              </button>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Episode list sidebar */}

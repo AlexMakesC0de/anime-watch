@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   Home,
   Search,
@@ -27,6 +28,22 @@ const libraryFilters = [
 
 export default function Sidebar(): JSX.Element {
   const navigate = useNavigate()
+  const [appVersion, setAppVersion] = useState('...')
+
+  useEffect(() => {
+    let mounted = true
+    window.api.getAppVersion()
+      .then((version) => {
+        if (mounted) setAppVersion(version)
+      })
+      .catch(() => {
+        if (mounted) setAppVersion('?')
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <aside className="w-56 bg-dark-950 border-r border-dark-900 flex flex-col shrink-0">
@@ -92,7 +109,7 @@ export default function Sidebar(): JSX.Element {
       <div className="mt-auto p-4">
         <div className="flex items-center gap-2 text-dark-600 text-xs">
           <Clock size={12} />
-          <span>v1.0.0</span>
+          <span>v{appVersion}</span>
         </div>
       </div>
     </aside>

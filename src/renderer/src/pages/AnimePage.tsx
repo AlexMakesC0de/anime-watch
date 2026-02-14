@@ -70,6 +70,14 @@ export default function AnimePage(): JSX.Element {
         score: anime.averageScore ? anime.averageScore / 10 : null
       })
     }
+
+    // When marking as completed, mark all episodes as watched
+    if (status === 'COMPLETED' && anime.episodes) {
+      await window.api.markAllEpisodesCompleted(anime.id, anime.episodes)
+      const progress = await window.api.getProgress(anime.id) as EpisodeProgress[]
+      setEpisodeProgress(progress)
+    }
+
     const updated = (await window.api.getAnime(anime.id)) as LocalAnime
     setLocalAnime(updated)
   }

@@ -20,6 +20,8 @@ const api = {
   getContinueWatching: () => ipcRenderer.invoke('db:get-continue-watching'),
   toggleEpisodeCompleted: (anilistId: number, episodeNumber: number, completed: boolean) =>
     ipcRenderer.invoke('db:toggle-episode-completed', anilistId, episodeNumber, completed),
+  markAllEpisodesCompleted: (anilistId: number, totalEpisodes: number) =>
+    ipcRenderer.invoke('db:mark-all-completed', anilistId, totalEpisodes),
 
   // ── Streaming Provider ─────────────────────────
   fetchEpisodeSources: (opts: Record<string, unknown>) =>
@@ -37,6 +39,7 @@ const api = {
     ipcRenderer.on('window:maximized-changed', handler)
     return () => ipcRenderer.removeListener('window:maximized-changed', handler)
   },
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
 
   // ── Auto Updater ───────────────────────────────
   onUpdateAvailable: (callback: (version: string) => void) => {

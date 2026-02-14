@@ -15,7 +15,8 @@ import {
   getEpisodeProgress,
   getContinueWatching,
   clearProviderMapping,
-  toggleEpisodeCompleted
+  toggleEpisodeCompleted,
+  markAllEpisodesCompleted
 } from './database'
 import { fetchEpisodeSources, type FetchEpisodeOpts } from './providers'
 import { startProxyServer, stopProxyServer } from './proxy'
@@ -112,6 +113,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle('db:toggle-episode-completed', (_event, anilistId: number, episodeNumber: number, completed: boolean) =>
     toggleEpisodeCompleted(anilistId, episodeNumber, completed)
   )
+  ipcMain.handle('db:mark-all-completed', (_event, anilistId: number, totalEpisodes: number) =>
+    markAllEpisodesCompleted(anilistId, totalEpisodes)
+  )
 
   // ── Streaming Provider ────────────────────────────────────────
   ipcMain.handle('provider:fetch-sources', async (_event, opts: FetchEpisodeOpts) => {
@@ -143,6 +147,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('window:is-maximized', (event) => {
     return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
+  ipcMain.handle('app:get-version', () => app.getVersion())
 
   // ── Auto Updater ──────────────────────────────────────────
   ipcMain.on('updater:restart', () => {
@@ -151,6 +156,9 @@ function registerIpcHandlers(): void {
 }
 
 // ─── App Lifecycle ─────────────────────────────────────────────
+
+// Allow autoplay in webviews (episode player)
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.animewatch.app')
